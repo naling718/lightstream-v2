@@ -54,5 +54,5 @@ public class TextShareController {
             code = generateCode();
         }
         return code;
-    }
+        }
 }
