@@ -10,6 +10,7 @@ import java.time.Duration;
 @Service
 public class TextShareService {
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private static final int MAX_ATTEMPTS = 10;
     private final SecureRandom random = new SecureRandom();
     private static final String KEY_PREFIX = "text:";
     private final StringRedisTemplate redisTemplate;
@@ -21,13 +22,15 @@ public class TextShareService {
     }
 
     public String share(String text) {
-        String code;
-        boolean res;
-        do {
-            code = generateCode();
-            res = redisTemplate.opsForValue().setIfAbsent(key(code), text, Duration.ofMinutes(ttlMinutes));
-        } while (Boolean.TRUE.equals(res)) ;
-        return code;
+        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+            String code = generateCode();
+            Boolean stored = redisTemplate.opsForValue()
+                    .setIfAbsent(key(code), text, Duration.ofMinutes(ttlMinutes));
+            if (Boolean.TRUE.equals(stored)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("Could not generate a unique claim code");
     }
 
     public String claim(String code){

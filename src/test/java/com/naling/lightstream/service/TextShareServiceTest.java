@@ -1,69 +1,85 @@
 package com.naling.lightstream.service;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-@Disabled("Rewriting with a mocked Redis in session 5")
+@ExtendWith(MockitoExtension.class)
 class TextShareServiceTest {
     private TextShareService service;
 
+    @Mock
+    private StringRedisTemplate redisTemplate;
+
+    @Mock
+    private ValueOperations<String, String> valueOps;
+
     @BeforeEach
     void setUp(){
-        //service = new TextShareService();
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        service = new TextShareService(redisTemplate, 15);
     }
 
     @Test
-    void sharedTextCanBeClaimed(){
+    void shareStoresTextOnceAndReturnsItsCode(){
+        // Arrange
+        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
         // Act
         String code = service.share("hello");
-        String result = service.claim(code);
         // Assert
-        assertEquals("hello", result);
-    }
-
-    @Test
-    void unknownCodeReturnNull(){
-        // Act
-        String result = service.claim("KKKK");
-        // Assert
-        assertNull(result);
-    }
-
-    @Test
-    void codeHasFourCharacters(){
-        // Act
-        String code = service.share("random");
-        // Assert
+        verify(valueOps, times(1)).setIfAbsent("text:"+code, "hello", Duration.ofMinutes(15));
         assertEquals(4, code.length());
     }
 
     @Test
-    void twoSharesDiffCodes(){
+    void shareRetriesWhenCodeIsTaken(){
+        // Arrange
+        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(false, true);
         // Act
-        String code1 = service.share("first");
-        String code2 = service.share("second");
+        String code = service.share("hello");
         // Assert
-        assertNotEquals(code1, code2);
+        verify(valueOps, times(2)).setIfAbsent(anyString(), eq("hello"), eq(Duration.ofMinutes(15)));
+
+        assertNotNull(code);
     }
 
     @Test
-    void sharesNeverCollide(){
-        // Set up
-        Set<String> set = new HashSet<>();
-        // Act
-        for (int i = 0; i < 10000; i++){
-            String code = service.share("hello");
-            set.add(code);
-        }
+    void shareGivesUpAfterMaxAttempts(){
+        // Arrange
+        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(false);
         // Assert
-        assertEquals(10000, set.size());
+        assertThrows(IllegalStateException.class, () -> service.share("hello"));
+        verify(valueOps, times(10)).setIfAbsent(anyString(), eq("hello"), eq(Duration.ofMinutes(15)));
     }
 
+    @Test
+    void claimReturnsStoredText(){
+        // Arrange
+        when(valueOps.getAndDelete("text:AB3K")).thenReturn("hello");
+        // Act
+        String text = service.claim("AB3K");
+        // Assert
+        assertEquals(text, "hello");
+    }
 
+    @Test
+    void claimUnknownCodeReturnsNull(){
+        // Arrange
+        when(valueOps.getAndDelete("text:XXXX")).thenReturn(null);
+        // Act
+        String text = service.claim("XXXX");
+        // Assert
+        assertNull(text);
+    }
 }

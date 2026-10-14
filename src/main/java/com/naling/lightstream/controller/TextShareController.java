@@ -17,7 +17,7 @@ public class TextShareController {
         this.textShareService = textShareService;
     }
 
-    @PostMapping ("/share")
+    @PostMapping("/share")
     @ResponseStatus(HttpStatus.CREATED)
     public ShareResponse share(@RequestBody ShareRequest request){
         if (request.text() == null || request.text().isBlank()){
@@ -27,7 +27,7 @@ public class TextShareController {
         return new ShareResponse(code);
     }
 
-    @GetMapping("/claim/{code}")
+    @PostMapping("/claim/{code}")
     public ClaimResponse claim(@PathVariable String code){
         String text = textShareService.claim(code);
         if (text == null){
