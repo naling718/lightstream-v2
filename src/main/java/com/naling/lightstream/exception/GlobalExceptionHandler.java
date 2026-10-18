@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public  ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException ex){
-        ApiError body = new ApiError(400, "Bad Request", "text must not be blank");
+        ApiError body = new ApiError(400, "Bad Request", "Text must not be blank");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
