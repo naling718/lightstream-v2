@@ -1,3 +1,5 @@
 package com.naling.lightstream.dto;
 
-public record ShareRequest (String text) {}
+import jakarta.validation.constraints.NotBlank;
+
+public record ShareRequest (@NotBlank(message = "Text must not be blank") String text) {}
