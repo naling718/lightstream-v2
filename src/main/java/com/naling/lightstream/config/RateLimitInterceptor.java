@@ -4,30 +4,31 @@ import com.naling.lightstream.exception.RateLimitExceededException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.time.Duration;
 
-@Component
-public class ClaimRateLimitInterceptor implements HandlerInterceptor {
-    private static final String KEY_PREFIX = "ratelimit:claim:";
-    private static final int MAX_ATTEMPTS = 10;
-    private static final Duration WINDOW = Duration.ofMinutes(5);
+public class RateLimitInterceptor implements HandlerInterceptor {
+    private final String keyPrefix;
+    private final int maxAttempts;
+    private final Duration window;
 
     private final StringRedisTemplate stringRedisTemplate;
-    public ClaimRateLimitInterceptor(StringRedisTemplate stringRedisTemplate){
+    public RateLimitInterceptor(StringRedisTemplate stringRedisTemplate, String keyPrefix, int maxAttempts, Duration window){
         this.stringRedisTemplate = stringRedisTemplate;
+        this.keyPrefix = keyPrefix;
+        this.maxAttempts = maxAttempts;
+        this.window = window;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String key = KEY_PREFIX + request.getRemoteAddr();
+        String key = this.keyPrefix + request.getRemoteAddr();
         Long count = stringRedisTemplate.opsForValue().increment(key);
         if (count != null && count == 1){
-            stringRedisTemplate.expire(key, WINDOW);
+            stringRedisTemplate.expire(key, this.window);
         }
-        if (count != null && count > MAX_ATTEMPTS){
+        if (count != null && count > this.maxAttempts){
             throw new RateLimitExceededException();
         }
         return true;

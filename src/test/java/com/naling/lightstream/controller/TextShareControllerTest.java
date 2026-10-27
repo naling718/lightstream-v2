@@ -98,13 +98,24 @@ class TextShareControllerTest {
 
 
     @Test
-    void tooManyAttemptsReturns429() throws Exception{
+    void tooManyClaimsReturns429() throws Exception{
         when(valueOps.increment(anyString())).thenReturn(11L);
 
         mockMvc.perform(post("/api/v1/text/claim/AB3K"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string("Retry-After", "300"));
     }
+
+    @Test
+    void tooManySharesReturns429() throws Exception{
+        when(valueOps.increment(anyString())).thenReturn(31L);
+        mockMvc.perform(post("/api/v1/text/share")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"hello\"}"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "300"));
+    }
+
 
     @Test
     void redisDownReturns503() throws Exception{
