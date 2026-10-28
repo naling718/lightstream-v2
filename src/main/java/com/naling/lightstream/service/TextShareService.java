@@ -4,51 +4,25 @@ package com.naling.lightstream.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import java.security.SecureRandom;
 import java.time.Duration;
 
 @Service
 public class TextShareService {
-    private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final int MAX_ATTEMPTS = 10;
-    private final SecureRandom random = new SecureRandom();
     private static final String KEY_PREFIX = "text:";
-    private final StringRedisTemplate redisTemplate;
     private final long ttlMinutes;
+    private final ClaimCodeService claimCodeService;
 
-    public TextShareService(StringRedisTemplate redisTemplate, @Value("${lightstream.text.ttl-minutes}") long ttlMinutes){
-        this.redisTemplate = redisTemplate;
+    public TextShareService( @Value("${lightstream.text.ttl-minutes}") long ttlMinutes,
+                            ClaimCodeService claimCodeService){
         this.ttlMinutes = ttlMinutes;
+        this.claimCodeService = claimCodeService;
     }
 
     public String share(String text) {
-        for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-            String code = generateCode();
-            Boolean stored = redisTemplate.opsForValue()
-                    .setIfAbsent(key(code), text, Duration.ofMinutes(ttlMinutes));
-            if (Boolean.TRUE.equals(stored)) {
-                return code;
-            }
-        }
-        throw new IllegalStateException("Could not generate a unique claim code");
+        return claimCodeService.reserve(KEY_PREFIX, text, Duration.ofMinutes(ttlMinutes));
     }
 
     public String claim(String code){
-        return redisTemplate.opsForValue().getAndDelete(key(code));
+        return claimCodeService.consume(KEY_PREFIX, code);
     }
-
-    private String generateCode(){
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++){
-            int index = random.nextInt(ALPHABET.length());
-            sb.append(ALPHABET.charAt(index));
-        }
-        return sb.toString();
-    }
-
-    private String key(String code){
-        return KEY_PREFIX + code;
-    }
-
-
 }

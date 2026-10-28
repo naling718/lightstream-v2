@@ -20,63 +20,33 @@ class TextShareServiceTest {
     private TextShareService service;
 
     @Mock
-    private StringRedisTemplate redisTemplate;
-
-    @Mock
-    private ValueOperations<String, String> valueOps;
+    private ClaimCodeService claimCodeService;
 
     @BeforeEach
     void setUp(){
-        when(redisTemplate.opsForValue()).thenReturn(valueOps);
-        service = new TextShareService(redisTemplate, 15);
+        service = new TextShareService(15, claimCodeService);
     }
 
     @Test
-    void shareStoresTextOnceAndReturnsItsCode(){
-        // Arrange
-        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(true);
-        // Act
+    void shareReservesCodeWithTextPrefix() {
+        when(claimCodeService.reserve("text:", "hello", Duration.ofMinutes(15))).thenReturn("AB3K");
         String code = service.share("hello");
-        // Assert
-        verify(valueOps, times(1)).setIfAbsent("text:"+code, "hello", Duration.ofMinutes(15));
-        assertEquals(4, code.length());
+        assertEquals("AB3K", code);
     }
 
-    @Test
-    void shareRetriesWhenCodeIsTaken(){
-        // Arrange
-        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(false, true);
-        // Act
-        String code = service.share("hello");
-        // Assert
-        verify(valueOps, times(2)).setIfAbsent(anyString(), eq("hello"), eq(Duration.ofMinutes(15)));
-
-        assertNotNull(code);
-    }
-
-    @Test
-    void shareGivesUpAfterMaxAttempts(){
-        // Arrange
-        when(valueOps.setIfAbsent(anyString(), anyString(), any(Duration.class))).thenReturn(false);
-        // Assert
-        assertThrows(IllegalStateException.class, () -> service.share("hello"));
-        verify(valueOps, times(10)).setIfAbsent(anyString(), eq("hello"), eq(Duration.ofMinutes(15)));
-    }
 
     @Test
     void claimReturnsStoredText(){
-        // Arrange
-        when(valueOps.getAndDelete("text:AB3K")).thenReturn("hello");
+        when(claimCodeService.consume("text:", "AB3K")).thenReturn("hello");
         // Act
         String text = service.claim("AB3K");
         // Assert
-        assertEquals(text, "hello");
+        assertEquals("hello", text);;
     }
 
     @Test
     void claimUnknownCodeReturnsNull(){
-        // Arrange
-        when(valueOps.getAndDelete("text:XXXX")).thenReturn(null);
+        when(claimCodeService.consume("text:", "XXXX")).thenReturn(null);
         // Act
         String text = service.claim("XXXX");
         // Assert
