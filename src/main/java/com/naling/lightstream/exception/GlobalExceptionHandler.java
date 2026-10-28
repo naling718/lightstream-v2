@@ -13,6 +13,7 @@ import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -48,6 +49,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler(EmptyFileException.class)
+    public ResponseEntity<ApiError> handleClaimNotFound(EmptyFileException ex){
+        ApiError body = new ApiError(400, "Bad Request", "File must not be empty");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiError> handleTooLarge(MaxUploadSizeExceededException ex) {
+        ApiError body = new ApiError(413, "Content Too Large", "File must be at most 50 MB");
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(body);
+    }
+
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
         if (ex instanceof ErrorResponse errorResponse) {
@@ -59,4 +73,7 @@ public class GlobalExceptionHandler {
         ApiError body = new ApiError(500, "Internal Server Error", "Unexpected error");
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
+
+
 }
+

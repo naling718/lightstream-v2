@@ -20,6 +20,6 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(new RateLimitInterceptor(redisTemplate, "ratelimit:claim:", 10, Duration.ofMinutes(5)))
                 .addPathPatterns("/api/v1/text/claim/**");
         registry.addInterceptor(new RateLimitInterceptor(redisTemplate, "ratelimit:share:", 30, Duration.ofMinutes(5)))
-                .addPathPatterns("/api/v1/text/share");
+                .addPathPatterns("/api/v1/text/share", "/api/v1/file/share");
     }
 }
