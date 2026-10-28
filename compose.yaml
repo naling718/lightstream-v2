@@ -12,5 +12,19 @@ services:
     volumes:
       - redis-data:/data
 
+  storage:
+    image: rustfs/rustfs:1.0.4
+    container_name: lightstream-storage
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - RUSTFS_ACCESS_KEY=lightstream
+      - RUSTFS_SECRET_KEY=lightstream-secret
+      - RUSTFS_CONSOLE_ENABLE=true
+    volumes:
+      - storage-data:/data
+
 volumes:
   redis-data:
+  storage-data:
