@@ -3,6 +3,7 @@ package com.naling.lightstream.service;
 import com.naling.lightstream.model.FileMetadata;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
@@ -28,8 +29,8 @@ public class FileShareService {
 
     public String share(MultipartFile file) {
         String objectKey = fileStorageService.upload(file);
-        String fileName = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
-        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+        String fileName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "file";
+        String contentType = StringUtils.hasText(file.getContentType()) ? file.getContentType() : "application/octet-stream";
         try {
             FileMetadata metadata = new FileMetadata(
                     objectKey,
@@ -51,7 +52,4 @@ public class FileShareService {
         }
         return objectMapper.readValue(json, FileMetadata.class);
     }
-
-
-
 }
