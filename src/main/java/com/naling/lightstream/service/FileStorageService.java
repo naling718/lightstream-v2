@@ -8,10 +8,12 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -51,6 +53,18 @@ public class FileStorageService {
     public ResponseInputStream<GetObjectResponse> download(String objectKey) {
         return s3Client.getObject(r -> r.bucket(bucketName).key(objectKey));
     }
+
+    public int deleteObjectsOlderThan(Instant cutoff) {
+        int deleted = 0;
+        for (S3Object object : s3Client.listObjectsV2Paginator(r -> r.bucket(bucketName)).contents()) {
+            if (object.lastModified().isBefore(cutoff)) {
+                delete(object.key());
+                deleted++;
+            }
+        }
+        return deleted;
+    }
+
 
 
 
