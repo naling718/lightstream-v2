@@ -60,7 +60,7 @@ class TextShareControllerTest {
 
         mockMvc.perform(post("/api/v1/text/claim/ZZZZ"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("No text for code ZZZZ"));
+                .andExpect(jsonPath("$.message").value("No share found for code ZZZZ"));
     }
 
     @Test

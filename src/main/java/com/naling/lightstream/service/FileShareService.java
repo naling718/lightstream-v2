@@ -43,4 +43,15 @@ public class FileShareService {
             throw e;
         }
     }
+
+    public FileMetadata claim(String code) {
+        String json = claimCodeService.consume(KEY_PREFIX, code);
+        if (json == null) {
+            return null;
+        }
+        return objectMapper.readValue(json, FileMetadata.class);
+    }
+
+
+
 }

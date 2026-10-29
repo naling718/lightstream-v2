@@ -18,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(new RateLimitInterceptor(redisTemplate, "ratelimit:claim:", 10, Duration.ofMinutes(5)))
-                .addPathPatterns("/api/v1/text/claim/**");
+                .addPathPatterns("/api/v1/text/claim/**", "/api/v1/file/claim/**");
         registry.addInterceptor(new RateLimitInterceptor(redisTemplate, "ratelimit:share:", 30, Duration.ofMinutes(5)))
                 .addPathPatterns("/api/v1/text/share", "/api/v1/file/share");
     }

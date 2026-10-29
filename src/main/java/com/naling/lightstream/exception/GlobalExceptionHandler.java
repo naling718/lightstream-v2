@@ -14,6 +14,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -60,6 +61,13 @@ public class GlobalExceptionHandler {
         ApiError body = new ApiError(413, "Content Too Large", "File must be at most 50 MB");
         return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE).body(body);
     }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiError> handleBadMultipart(MultipartException ex) {
+        ApiError body = new ApiError(400, "Bad Request", "Request must be multipart/form-data with a 'file' part");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
 
 
     @ExceptionHandler(Exception.class)

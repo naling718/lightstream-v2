@@ -3,8 +3,10 @@ package com.naling.lightstream.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 
 import java.io.IOException;
@@ -45,6 +47,11 @@ public class FileStorageService {
     public void delete(String objectKey) {
         s3Client.deleteObject(r -> r.bucket(bucketName).key(objectKey));
     }
+
+    public ResponseInputStream<GetObjectResponse> download(String objectKey) {
+        return s3Client.getObject(r -> r.bucket(bucketName).key(objectKey));
+    }
+
 
 
 
