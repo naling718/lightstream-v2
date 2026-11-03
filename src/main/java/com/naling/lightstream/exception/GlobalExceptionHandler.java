@@ -40,7 +40,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public  ResponseEntity<ApiError> handleMethodArgumentNotValid(MethodArgumentNotValidException ex){
-        ApiError body = new ApiError(400, "Bad Request", "Text must not be blank");
+        String message = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+        ApiError body = new ApiError(400, "Bad Request", message);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -66,6 +67,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleBadMultipart(MultipartException ex) {
         ApiError body = new ApiError(400, "Bad Request", "Request must be multipart/form-data with a 'file' part");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(EmailAlreadyRegisteredException.class)
+    public ResponseEntity<ApiError> handleEmailAlreadyRegistered(EmailAlreadyRegisteredException ex) {
+        ApiError body = new ApiError(409, "Conflict", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(Exception.class)

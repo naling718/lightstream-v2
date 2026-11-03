@@ -1,10 +1,12 @@
 package com.naling.lightstream.controller;
 
+import com.naling.lightstream.config.SecurityConfig;
 import com.naling.lightstream.service.TextShareService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -20,6 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(TextShareController.class)
+@Import(SecurityConfig.class)
 class TextShareControllerTest {
 
     @Autowired
