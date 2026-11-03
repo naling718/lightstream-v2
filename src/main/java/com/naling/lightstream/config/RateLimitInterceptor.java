@@ -14,6 +14,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final Duration window;
 
     private final StringRedisTemplate stringRedisTemplate;
+
     public RateLimitInterceptor(StringRedisTemplate stringRedisTemplate, String keyPrefix, int maxAttempts, Duration window){
         this.stringRedisTemplate = stringRedisTemplate;
         this.keyPrefix = keyPrefix;

@@ -25,6 +25,24 @@ services:
     volumes:
       - storage-data:/data
 
+  postgres:
+    image: postgres:17
+    container_name: lightstream-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=lightstream
+      - POSTGRES_USER=lightstream
+      - POSTGRES_PASSWORD=lightstream-secret
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "lightstream", "-d", "lightstream" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
   redis-data:
   storage-data:
+  postgres-data:

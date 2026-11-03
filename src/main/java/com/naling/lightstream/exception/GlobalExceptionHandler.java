@@ -68,8 +68,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
         if (ex instanceof ErrorResponse errorResponse) {

@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @TestConfiguration(proxyBeanMethods = false)
 public class TestcontainersConfiguration {
@@ -30,4 +31,12 @@ public class TestcontainersConfiguration {
         return registry -> registry.add("lightstream.storage.endpoint",
                 () -> "http://" + storageContainer.getHost() + ":" + storageContainer.getMappedPort(9000));
     }
+
+    @Bean
+    @ServiceConnection
+    PostgreSQLContainer postgresContainer() {
+        return new PostgreSQLContainer("postgres:17");
+    }
+
+
 }
