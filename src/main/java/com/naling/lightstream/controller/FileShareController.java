@@ -7,6 +7,8 @@ import com.naling.lightstream.model.FileMetadata;
 import com.naling.lightstream.service.FileShareService;
 import com.naling.lightstream.service.FileStorageService;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
@@ -27,12 +29,13 @@ public class FileShareController {
 
     @PostMapping("/share")
     @ResponseStatus(HttpStatus.CREATED)
-    public ShareResponse share(@RequestParam("file") MultipartFile file) {
+    public ShareResponse share(@AuthenticationPrincipal Jwt jwt, @RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             throw new EmptyFileException();
         }
-        return new ShareResponse(fileShareService.share(file));
+        return new ShareResponse(fileShareService.share(Long.valueOf(jwt.getSubject()), file));
     }
+
 
     @PostMapping("/claim/{code}")
     public ResponseEntity<StreamingResponseBody> claim(@PathVariable String code) {

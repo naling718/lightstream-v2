@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -22,15 +23,18 @@ class TextShareServiceTest {
     @Mock
     private ClaimCodeService claimCodeService;
 
+    @Mock
+    private HistoryService historyService;
+
     @BeforeEach
     void setUp(){
-        service = new TextShareService(15, claimCodeService);
+        service = new TextShareService(15, claimCodeService, historyService);
     }
 
     @Test
     void shareReservesCodeWithTextPrefix() {
         when(claimCodeService.reserve("text:", "hello", Duration.ofMinutes(15))).thenReturn("AB3K");
-        String code = service.share("hello");
+        String code = service.share(1L, "hello");
         assertEquals("AB3K", code);
     }
 
@@ -52,4 +56,26 @@ class TextShareServiceTest {
         // Assert
         assertNull(text);
     }
+
+    @Test
+    void shareRecordsHistory() {
+        when(claimCodeService.reserve("text:", "hello", Duration.ofMinutes(15))).thenReturn("AB3K");
+
+        service.share(1L, "hello");
+
+        verify(historyService).recordText(1L, "AB3K", "hello");
+    }
+
+    @Test
+    void shareReleasesCodeWhenHistoryFails() {
+        when(claimCodeService.reserve("text:", "hello", Duration.ofMinutes(15))).thenReturn("AB3K");
+        doThrow(new DataAccessResourceFailureException("database down"))
+                .when(historyService).recordText(1L, "AB3K", "hello");
+
+        assertThrows(DataAccessResourceFailureException.class, () -> service.share(1L, "hello"));
+        verify(claimCodeService).consume("text:", "AB3K");
+    }
+
+
+
 }

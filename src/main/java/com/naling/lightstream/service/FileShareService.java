@@ -15,31 +15,36 @@ public class FileShareService {
 
     private final FileStorageService fileStorageService;
     private final ClaimCodeService claimCodeService;
+    private final HistoryService historyService;
     private final ObjectMapper objectMapper;
     private final long ttlMinutes;
 
 
     public FileShareService(FileStorageService fileStorageService, ClaimCodeService claimCodeService,
-                            ObjectMapper objectMapper, @Value("${lightstream.file.ttl-minutes}") long ttlMinutes){
+                            ObjectMapper objectMapper, @Value("${lightstream.file.ttl-minutes}") long ttlMinutes, HistoryService
+                            historyService){
         this.fileStorageService = fileStorageService;
         this.claimCodeService = claimCodeService;
         this.objectMapper = objectMapper;
         this.ttlMinutes = ttlMinutes;
+        this.historyService = historyService;
     }
 
-    public String share(MultipartFile file) {
+    public String share(Long userId, MultipartFile file) {
         String objectKey = fileStorageService.upload(file);
         String fileName = StringUtils.hasText(file.getOriginalFilename()) ? file.getOriginalFilename() : "file";
         String contentType = StringUtils.hasText(file.getContentType()) ? file.getContentType() : "application/octet-stream";
+        String code = null;
         try {
-            FileMetadata metadata = new FileMetadata(
-                    objectKey,
-                    fileName,
-                    contentType,
-                    file.getSize());
+            FileMetadata metadata = new FileMetadata(objectKey, fileName, contentType, file.getSize());
             String json = objectMapper.writeValueAsString(metadata);
-            return claimCodeService.reserve(KEY_PREFIX, json, Duration.ofMinutes(ttlMinutes));
+            code = claimCodeService.reserve(KEY_PREFIX, json, Duration.ofMinutes(ttlMinutes));
+            historyService.recordFile(userId, code, metadata);
+            return code;
         } catch (RuntimeException e) {
+            if (code != null) {
+                claimCodeService.consume(KEY_PREFIX, code);
+            }
             fileStorageService.delete(objectKey);
             throw e;
         }

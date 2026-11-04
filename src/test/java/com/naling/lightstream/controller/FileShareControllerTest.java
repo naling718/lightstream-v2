@@ -63,9 +63,9 @@ class FileShareControllerTest {
     @Test
     void shareReturns201WithCode() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
-        when(fileShareService.share(any())).thenReturn("AB3K");
+        when(fileShareService.share(any(), any())).thenReturn("AB3K");
 
-        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.claimCode").value("AB3K"));
     }
@@ -74,23 +74,23 @@ class FileShareControllerTest {
     void emptyFileReturns400() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
 
-        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("File must not be empty"));
-        verify(fileShareService, never()).share(any());
+        verify(fileShareService, never()).share(any(), any());
     }
 
     @Test
     void wrongPartNameReturns400() throws Exception {
         MockMultipartFile file = new MockMultipartFile("document", "hello.txt", "text/plain", "hello".getBytes());
 
-        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void jsonBodyReturns400() throws Exception {
-        mockMvc.perform(post("/api/v1/file/share").with(jwt())
+        mockMvc.perform(post("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isBadRequest())
@@ -100,9 +100,9 @@ class FileShareControllerTest {
     @Test
     void tooLargeFileReturns413() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "big.bin", "application/octet-stream", "x".getBytes());
-        when(fileShareService.share(any())).thenThrow(new MaxUploadSizeExceededException(50 * 1024 * 1024));
+        when(fileShareService.share(any(), any())).thenThrow(new MaxUploadSizeExceededException(50 * 1024 * 1024));
 
-        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isContentTooLarge())
                 .andExpect(jsonPath("$.message").value("File must be at most 50 MB"));
     }
@@ -110,9 +110,9 @@ class FileShareControllerTest {
     @Test
     void redisDownOnShareReturns503() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
-        when(fileShareService.share(any())).thenThrow(new QueryTimeoutException("timeout"));
+        when(fileShareService.share(any(), any())).thenThrow(new QueryTimeoutException("timeout"));
 
-        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isServiceUnavailable());
     }
 
@@ -163,6 +163,6 @@ class FileShareControllerTest {
 
         mockMvc.perform(multipart("/api/v1/file/share").file(file))
                 .andExpect(status().isUnauthorized());
-        verify(fileShareService, never()).share(any());
+        verify(fileShareService, never()).share(any(), any());
     }
 }

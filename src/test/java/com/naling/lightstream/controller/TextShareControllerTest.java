@@ -47,10 +47,11 @@ class TextShareControllerTest {
     @Test
     void shareReturns201WithCode() throws Exception {
         // Arrange: the (mocked) service returns a known code
-        when(textShareService.share("hello")).thenReturn("AB3K");
+        when(textShareService.share(1L, "hello")).thenReturn("AB3K");
 
         // Act + Assert: send a request, check status and JSON
-        mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
+
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isCreated())
@@ -77,7 +78,7 @@ class TextShareControllerTest {
 
     @Test
     void blankTextReturns400() throws Exception{
-        mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"\"}"))
                 .andExpect(status().isBadRequest())
@@ -86,7 +87,7 @@ class TextShareControllerTest {
 
     @Test
     void malformedJsonReturns400() throws Exception{
-        mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":"))
                 .andExpect(status().isBadRequest())
@@ -112,7 +113,7 @@ class TextShareControllerTest {
     @Test
     void tooManySharesReturns429() throws Exception{
         when(valueOps.increment(anyString())).thenReturn(31L);
-        mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isTooManyRequests())
@@ -122,9 +123,9 @@ class TextShareControllerTest {
 
     @Test
     void redisDownReturns503() throws Exception{
-        when(textShareService.share("hello")).thenThrow(new QueryTimeoutException("timeout"));
+        when(textShareService.share(1L, "hello")).thenThrow(new QueryTimeoutException("timeout"));
 
-        mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isServiceUnavailable())
@@ -138,7 +139,7 @@ class TextShareControllerTest {
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Login required"));
-        verify(textShareService, never()).share(anyString());
+        verify(textShareService, never()).share(any(), anyString());
     }
 
 

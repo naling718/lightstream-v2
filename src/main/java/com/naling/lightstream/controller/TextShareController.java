@@ -7,6 +7,8 @@ import com.naling.lightstream.dto.ShareRequest;
 import com.naling.lightstream.dto.ShareResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -21,10 +23,11 @@ public class TextShareController {
 
     @PostMapping("/share")
     @ResponseStatus(HttpStatus.CREATED)
-    public ShareResponse share(@Valid @RequestBody ShareRequest request){
-        String code = textShareService.share(request.text());
+    public ShareResponse share(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ShareRequest request){
+        String code = textShareService.share(Long.valueOf(jwt.getSubject()), request.text());
         return new ShareResponse(code);
     }
+
 
     @PostMapping("/claim/{code}")
     public ClaimResponse claim(@PathVariable String code){

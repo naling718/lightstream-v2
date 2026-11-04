@@ -1,6 +1,9 @@
 package com.naling.lightstream;
 
 import com.jayway.jsonpath.JsonPath;
+import com.naling.lightstream.user.User;
+import com.naling.lightstream.user.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,9 +37,21 @@ class ShareFlowIntegrationTest {
     @Value("${lightstream.storage.bucket}")
     private String bucket;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private String userId;
+
+    @BeforeEach
+    void setUp() {
+        User user = userRepository.findByEmail("flow@example.com")
+                .orElseGet(() -> userRepository.save(new User("flow@example.com", "hash")));
+        userId = user.getId().toString();
+    }
+
     @Test
     void textCanBeClaimedOnlyOnce() throws Exception {
-        MvcResult shared = mockMvc.perform(post("/api/v1/text/share").with(jwt())
+        MvcResult shared = mockMvc.perform(post("/api/v1/text/share").with(jwt().jwt(token -> token.subject("1")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isCreated())
@@ -54,7 +69,7 @@ class ShareFlowIntegrationTest {
     @Test
     void fileCanBeClaimedOnlyOnceAndIsDeleted() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
-        MvcResult shared = mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
+        MvcResult shared = mockMvc.perform(multipart("/api/v1/file/share").with(jwt().jwt(token -> token.subject("1"))).file(file))
                 .andExpect(status().isCreated())
                 .andReturn();
         String code = JsonPath.read(shared.getResponse().getContentAsString(), "$.claimCode");
