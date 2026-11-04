@@ -1,6 +1,7 @@
 package com.naling.lightstream.service;
 
 import com.naling.lightstream.exception.EmailAlreadyRegisteredException;
+import com.naling.lightstream.exception.InvalidCredentialsException;
 import com.naling.lightstream.user.User;
 import com.naling.lightstream.user.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -32,5 +33,16 @@ public class AuthService {
             throw new EmailAlreadyRegisteredException();
         }
     }
+
+    public User authenticate(String email, String password) {
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        User user = userRepository.findByEmail(normalizedEmail)
+                .orElseThrow(InvalidCredentialsException::new);
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw new InvalidCredentialsException();
+        }
+        return user;
+    }
+
 }
 

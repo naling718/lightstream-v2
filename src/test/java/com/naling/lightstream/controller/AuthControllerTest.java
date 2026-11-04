@@ -2,16 +2,22 @@ package com.naling.lightstream.controller;
 
 import com.naling.lightstream.config.SecurityConfig;
 import com.naling.lightstream.exception.EmailAlreadyRegisteredException;
+import com.naling.lightstream.exception.InvalidCredentialsException;
 import com.naling.lightstream.service.AuthService;
+import com.naling.lightstream.service.TokenService;
 import com.naling.lightstream.user.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Duration;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -31,6 +37,19 @@ class AuthControllerTest {
 
     @MockitoBean
     private StringRedisTemplate redisTemplate;
+
+    @MockitoBean
+    private TokenService tokenService;
+
+    private ValueOperations<String, String> valueOps;
+
+    @BeforeEach
+    @SuppressWarnings("unchecked")
+    void setUp() {
+        valueOps = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+        when(valueOps.increment(anyString())).thenReturn(1L);
+    }
 
     @Test
     void registerReturns201WithoutPassword() throws Exception {
@@ -75,4 +94,43 @@ class AuthControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Email is already registered"));
     }
+
+    @Test
+    void loginReturnsToken() throws Exception {
+        User user = new User("alice@example.com", "hashed");
+        when(authService.authenticate("alice@example.com", "password123")).thenReturn(user);
+        when(tokenService.issue(user)).thenReturn("token-123");
+        when(tokenService.getTtl()).thenReturn(Duration.ofHours(1));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@example.com\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("token-123"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(3600));
+    }
+
+    @Test
+    void wrongPasswordReturns401() throws Exception {
+        when(authService.authenticate(any(), any())).thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@example.com\",\"password\":\"wrong-password\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+    }
+
+    @Test
+    void tooManyLoginAttemptsReturns429() throws Exception {
+        when(valueOps.increment(anyString())).thenReturn(11L);
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"alice@example.com\",\"password\":\"password123\"}"))
+                .andExpect(status().isTooManyRequests());
+        verify(authService, never()).authenticate(any(), any());
+    }
+
 }

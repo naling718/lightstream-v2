@@ -24,7 +24,11 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        String key = this.keyPrefix + request.getRemoteAddr();
+        String client = request.getUserPrincipal() != null
+                ? "user:" + request.getUserPrincipal().getName()
+                : request.getRemoteAddr();
+        String key = this.keyPrefix + client;
+
         Long count = stringRedisTemplate.opsForValue().increment(key);
         if (count != null && count == 1){
             stringRedisTemplate.expire(key, this.window);

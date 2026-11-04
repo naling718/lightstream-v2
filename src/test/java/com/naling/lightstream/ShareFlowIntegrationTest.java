@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -35,7 +36,7 @@ class ShareFlowIntegrationTest {
 
     @Test
     void textCanBeClaimedOnlyOnce() throws Exception {
-        MvcResult shared = mockMvc.perform(post("/api/v1/text/share")
+        MvcResult shared = mockMvc.perform(post("/api/v1/text/share").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isCreated())
@@ -53,7 +54,7 @@ class ShareFlowIntegrationTest {
     @Test
     void fileCanBeClaimedOnlyOnceAndIsDeleted() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
-        MvcResult shared = mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        MvcResult shared = mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isCreated())
                 .andReturn();
         String code = JsonPath.read(shared.getResponse().getContentAsString(), "$.claimCode");

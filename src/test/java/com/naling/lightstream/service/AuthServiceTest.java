@@ -1,6 +1,7 @@
 package com.naling.lightstream.service;
 
 import com.naling.lightstream.exception.EmailAlreadyRegisteredException;
+import com.naling.lightstream.exception.InvalidCredentialsException;
 import com.naling.lightstream.user.User;
 import com.naling.lightstream.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,8 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -75,5 +77,31 @@ class AuthServiceTest {
         assertThrows(EmailAlreadyRegisteredException.class,
                 () -> authService.register("alice@example.com", "password123"));
     }
+
+    @Test
+    void authenticateReturnsUserForCorrectPassword() {
+        User user = new User("alice@example.com", "hashed");
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "hashed")).thenReturn(true);
+
+        assertSame(user, authService.authenticate(" Alice@Example.com", "password123"));
+    }
+
+    @Test
+    void authenticateRejectsWrongPassword() {
+        User user = new User("alice@example.com", "hashed");
+        when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.authenticate("alice@example.com", "wrong"));
+    }
+
+    @Test
+    void authenticateRejectsUnknownEmail() {
+        when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+        assertThrows(InvalidCredentialsException.class, () -> authService.authenticate("nobody@example.com", "password123"));
+    }
+
 }
 

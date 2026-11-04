@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -64,7 +65,7 @@ class FileShareControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
         when(fileShareService.share(any())).thenReturn("AB3K");
 
-        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.claimCode").value("AB3K"));
     }
@@ -73,7 +74,7 @@ class FileShareControllerTest {
     void emptyFileReturns400() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
 
-        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("File must not be empty"));
         verify(fileShareService, never()).share(any());
@@ -83,13 +84,13 @@ class FileShareControllerTest {
     void wrongPartNameReturns400() throws Exception {
         MockMultipartFile file = new MockMultipartFile("document", "hello.txt", "text/plain", "hello".getBytes());
 
-        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     void jsonBodyReturns400() throws Exception {
-        mockMvc.perform(post("/api/v1/file/share")
+        mockMvc.perform(post("/api/v1/file/share").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"hello\"}"))
                 .andExpect(status().isBadRequest())
@@ -101,7 +102,7 @@ class FileShareControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "big.bin", "application/octet-stream", "x".getBytes());
         when(fileShareService.share(any())).thenThrow(new MaxUploadSizeExceededException(50 * 1024 * 1024));
 
-        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isContentTooLarge())
                 .andExpect(jsonPath("$.message").value("File must be at most 50 MB"));
     }
@@ -111,7 +112,7 @@ class FileShareControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
         when(fileShareService.share(any())).thenThrow(new QueryTimeoutException("timeout"));
 
-        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+        mockMvc.perform(multipart("/api/v1/file/share").with(jwt()).file(file))
                 .andExpect(status().isServiceUnavailable());
     }
 
@@ -154,5 +155,14 @@ class FileShareControllerTest {
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string("Retry-After", "300"));
         verify(fileShareService, never()).claim(anyString());
+    }
+
+    @Test
+    void shareWithoutLoginReturns401() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "hello.txt", "text/plain", "hello".getBytes());
+
+        mockMvc.perform(multipart("/api/v1/file/share").file(file))
+                .andExpect(status().isUnauthorized());
+        verify(fileShareService, never()).share(any());
     }
 }
